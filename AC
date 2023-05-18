@@ -1,0 +1,159 @@
+Clasa Achizitie:
+java
+import java.time.LocalDate;
+
+public class Achizitie implements Comparable<Achizitie>{
+    private String cod;
+    private LocalDate data;
+    private int cantitate;
+    private float pret;
+
+    public Achizitie(String cod, LocalDate data, int cantitate, float pret) {
+        this.cod = cod;
+        this.data = data;
+        this.cantitate = cantitate;
+        this.pret = pret;
+    }
+
+    public Achizitie() {}
+
+    public String getCod() {
+        return cod;
+    }
+
+    public LocalDate getData() {
+        return data;
+    }
+
+    public int getCantitate() {
+        return cantitate;
+    }
+
+    public float getPret() {
+        return pret;
+    }
+
+    public void setCod(String cod) {
+        this.cod = cod;
+    }
+
+    public void setData(LocalDate data) {
+        this.data = data;
+    }
+
+    public void setCantitate(int cantitate) {
+        this.cantitate = cantitate;
+    }
+
+    public void setPret(float pret) {
+        this.pret = pret;
+    }
+
+    public float valoare() {
+        return cantitate * pret;
+    }
+
+    @Override
+    public int compareTo(Achizitie a) {
+        float dif = this.valoare() - a.valoare();
+        if(dif > 0) return 1;
+        if(dif < 0) return -1;
+        return 0;
+    }
+
+    @Override
+    public String toString() {
+        return "Achizitie{" +
+                "cod='" + cod + '\'' +
+                ", data=" + data +
+                ", cantitate=" + cantitate +
+                ", pret=" + pret +
+                '}';
+    }
+}
+
+
+Metoda main cu toate cerintele:
+java
+import java.io.*;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class Main {
+    public static void main(String[] args) {
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("achizitii.txt"));
+            String line;
+            List<Achizitie> achizitii = new ArrayList<>();
+            while((line = br.readLine()) != null) {
+                String[] tokens = line.split(",");
+                String cod = tokens[0];
+                LocalDate data = LocalDate.of(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]), Integer.parseInt(tokens[3]));
+                int cantitate = Integer.parseInt(tokens[4]);
+                float pret = Float.parseFloat(tokens[5]);
+                Achizitie a = new Achizitie(cod, data, cantitate, pret);
+                achizitii.add(a);
+            }
+            br.close();
+
+            // Afisare achizitii cu cantitatea mai mare de 100 in prima jum. a lunii
+            System.out.println("Achizitii cu cantitatea mai mare de 100 in prima jumatate a lunii: ");
+            achizitii.stream()
+                    .filter(a -> a.getData().getDayOfMonth() <= 15 && a.getCantitate() > 100)
+                    .forEach(System.out::println);
+
+            // Afisare numar si valoare totala achizitii pe produs in ord. descrescatoare a valorii
+            Map<String, List<Achizitie>> achizitiiPeProdus = achizitii.stream().collect(Collectors.groupingBy(Achizitie::getCod));
+            List<Map.Entry<String, Float>> produseSortate = new ArrayList<>();
+            for(Map.Entry<String, List<Achizitie>> entry : achizitiiPeProdus.entrySet()) {
+                String codProdus = entry.getKey();
+                List<Achizitie> achizitiiProdus = entry.getValue();
+                float valoareTotala = (float) achizitiiProdus.stream().mapToDouble(Achizitie::valoare).sum();
+                produseSortate.add(new AbstractMap.SimpleEntry<>(codProdus, valoareTotala));
+            }
+            produseSortate.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+            System.out.println("Numar si valoare totala achizitii pe produs in ordinea descrescatoare a valorii: ");
+            produseSortate.forEach(e -> {
+                String codProdus = e.getKey();
+                List<Achizitie> achizitiiProdus = achizitiiPeProdus.get(codProdus);
+                System.out.println("Produs " + codProdus + " -> " + achizitiiProdus.size() + " achizitii, valoare totala: " + e.getValue() + " lei");
+            });
+
+
+            // Salvare produse frecvente in fisier binar
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("produseFrecvente.bin"));
+            achizitiiPeProdus.entrySet().stream()
+                    .filter(e -> e.getValue().size() > 3)
+                    .forEach(e -> {
+                        String codProdus = e.getKey();
+                        List<Achizitie> achizitiiProdus = e.getValue();
+                        try {
+                            oos.writeObject(achizitiiProdus);
+                        } catch (IOException ioException) {
+                            ioException.printStackTrace();
+                        }
+                    });
+            oos.close();
+
+            // Citire si afisare produse frecvente din fisier binar
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream("produseFrecvente.bin"));
+            List<List<Achizitie>> produseFrecvente = new ArrayList<>();
+            try{
+                while(true){
+                    List<Achizitie> achizitiiProdus = (List<Achizitie>) ois.readObject();
+                    produseFrecvente.add(achizitiiProdus);
+                }
+            } catch(EOFException ignored) {}
+
+            System.out.println("Produse frecvente citite din fisierul binar: ");
+            produseFrecvente.stream()
+                    .flatMap(List::stream)
+                    .forEach(System.out::println);
+
+            ois.close();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}
