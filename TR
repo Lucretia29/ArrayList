@@ -1,0 +1,181 @@
+Clasa Trotineta:
+
+java
+public class Trotineta implements Comparable<Trotineta> {
+    private String id;
+    private float distantaTotala;
+    private float vitezaMedie;
+    private float vitezaMaxima;
+
+    public Trotineta(String id, float distantaTotala, float vitezaMedie, float vitezaMaxima) {
+        this.id = id;
+        this.distantaTotala = distantaTotala;
+        this.vitezaMedie = vitezaMedie;
+        this.vitezaMaxima = vitezaMaxima;
+    }
+
+    public Trotineta() {
+
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public float getDistantaTotala() {
+        return distantaTotala;
+    }
+
+    public void setDistantaTotala(float distantaTotala) {
+        this.distantaTotala = distantaTotala;
+    }
+
+    public float getVitezaMedie() {
+        return vitezaMedie;
+    }
+
+    public void setVitezaMedie(float vitezaMedie) {
+        this.vitezaMedie = vitezaMedie;
+    }
+
+    public float getVitezaMaxima() {
+        return vitezaMaxima;
+    }
+
+    public void setVitezaMaxima(float vitezaMaxima) {
+        this.vitezaMaxima = vitezaMaxima;
+    }
+
+    @Override
+    public String toString() {
+        return "Trotineta{" +
+                "id='" + id + '\'' +
+                ", distantaTotala=" + distantaTotala +
+                ", vitezaMedie=" + vitezaMedie +
+                ", vitezaMaxima=" + vitezaMaxima +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Trotineta trotineta = (Trotineta) o;
+        return Math.abs(distantaTotala - trotineta.distantaTotala) < 10;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, distantaTotala, vitezaMedie, vitezaMaxima);
+    }
+
+    @Override
+    public int compareTo(Trotineta o) {
+        return Float.compare(this.distantaTotala, o.distantaTotala);
+    }
+}
+
+
+Citirea din fișier și formarea dicționarului:
+
+java
+public static void main(String[] args) {
+    Map<String, Trotineta> trotinete = new HashMap<>();
+    try (Scanner scanner = new Scanner(new File("trotinete.txt"))) {
+        while (scanner.hasNextLine()) {
+            String[] fields = scanner.nextLine().split("\t");
+            Trotineta trotineta = new Trotineta(fields[0], Float.parseFloat(fields[1]),
+                    Float.parseFloat(fields[2]), Float.parseFloat(fields[3]));
+            trotinete.put(fields[0], trotineta);
+        }
+    } catch (FileNotFoundException e) {
+        e.printStackTrace();
+    }
+    // restul codului pentru cerințe
+}
+
+
+Cerința 2:
+
+java
+// utilizând expresii lambda și forEach
+trotinete.values()
+        .stream()
+        .filter(t -> t.getVitezaMaxima() > 50)
+        .forEach(System.out::println);
+
+// sau utilizând un for clasic
+for (Trotineta t : trotinete.values()) {
+    if (t.getVitezaMaxima() > 50) {
+        System.out.println(t);
+    }
+}
+
+
+Cerința 3:
+
+java
+// cu Collectors
+Map<Float, List<Trotineta>> grupuri = trotinete.values()
+        .stream()
+        .collect(Collectors.groupingBy(Trotineta::getVitezaMedie));
+
+grupuri.forEach((k, v) -> System.out.println(
+        "viteza medie " + k + " km/h -> " + v.size() + " trotinete, suma distanțelor parcurse " +
+                v.stream().mapToDouble(Trotineta::getDistantaTotala).sum() + " km"));
+
+// fără Collectors
+Set<Float> vitezemedii = new HashSet<>();
+trotinete.values().forEach(t -> vitezemedii.add(t.getVitezaMedie()));
+
+for (Float vm : vitezemedii) {
+    List<Trotineta> t = trotinete.values()
+            .stream()
+            .filter(x -> x.getVitezaMedie() == vm)
+            .collect(Collectors.toList());
+
+    float suma = 0;
+    for (Trotineta trotineta : t) {
+        suma += trotineta.getDistantaTotala();
+    }
+    System.out.println("viteza medie " + vm + " km/h -> " + t.size() + " trotinete, suma distanțelor parcurse " + suma + " km");
+}
+
+
+Cerința 4:
+
+java
+try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("trotineteRapide.dat"))) {
+    trotinete.values()
+            .stream()
+            .filter(t -> t.getVitezaMedie() > 14 || t.getVitezaMaxima() > 50)
+            .forEach(t -> {
+                try {
+                    oos.writeObject(t);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+} catch (IOException e) {
+    e.printStackTrace();
+}
+
+
+Cerința 5:
+
+java
+try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("trotineteRapide.dat"))) {
+    Object obj;
+    while ((obj = ois.readObject()) != null) {
+        Trotineta trotineta = (Trotineta) obj;
+        System.out.println(trotineta);
+    }
+} catch (EOFException ex) {
+    // end of file reached
+} catch (IOException | ClassNotFoundException ex) {
+    ex.printStackTrace();
+}
